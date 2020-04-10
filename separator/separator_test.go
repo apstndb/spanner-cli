@@ -1,4 +1,4 @@
-package main
+package separator
 
 import (
 	"testing"
@@ -275,193 +275,193 @@ func TestSeparateInput(t *testing.T) {
 	for _, tt := range []struct {
 		desc  string
 		input string
-		want  []inputStatement
+		want  []InputStatement
 	}{
 		{
 			desc:  "single query",
 			input: `SELECT "123";`,
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: `SELECT "123"`,
-					delim:     delimiterHorizontal,
+					Statement: `SELECT "123"`,
+					Delim:     DelimiterHorizontal,
 				},
 			},
 		},
 		{
 			desc:  "double queries",
 			input: `SELECT "123"; SELECT "456";`,
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: `SELECT "123"`,
-					delim:     delimiterHorizontal,
+					Statement: `SELECT "123"`,
+					Delim:     DelimiterHorizontal,
 				},
 				{
-					statement: `SELECT "456"`,
-					delim:     delimiterHorizontal,
+					Statement: `SELECT "456"`,
+					Delim:     DelimiterHorizontal,
 				},
 			},
 		},
 		{
 			desc:  "quoted identifier",
 			input: "SELECT `1`, `2`; SELECT `3`, `4`;",
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: "SELECT `1`, `2`",
-					delim:     delimiterHorizontal,
+					Statement: "SELECT `1`, `2`",
+					Delim:     DelimiterHorizontal,
 				},
 				{
-					statement: "SELECT `3`, `4`",
-					delim:     delimiterHorizontal,
+					Statement: "SELECT `3`, `4`",
+					Delim:     DelimiterHorizontal,
 				},
 			},
 		},
 		{
 			desc:  "vertical delim",
 			input: `SELECT "123"\G`,
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: `SELECT "123"`,
-					delim:     delimiterVertical,
+					Statement: `SELECT "123"`,
+					Delim:     DelimiterVertical,
 				},
 			},
 		},
 		{
 			desc:  "mixed delim",
 			input: `SELECT "123"; SELECT "456"\G SELECT "789";`,
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: `SELECT "123"`,
-					delim:     delimiterHorizontal,
+					Statement: `SELECT "123"`,
+					Delim:     DelimiterHorizontal,
 				},
 				{
-					statement: `SELECT "456"`,
-					delim:     delimiterVertical,
+					Statement: `SELECT "456"`,
+					Delim:     DelimiterVertical,
 				},
 				{
-					statement: `SELECT "789"`,
-					delim:     delimiterHorizontal,
+					Statement: `SELECT "789"`,
+					Delim:     DelimiterHorizontal,
 				},
 			},
 		},
 		{
 			desc:  "sql query",
 			input: `SELECT * FROM t1 WHERE id = "123" AND "456"; DELETE FROM t2 WHERE true;`,
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: `SELECT * FROM t1 WHERE id = "123" AND "456"`,
-					delim:     delimiterHorizontal,
+					Statement: `SELECT * FROM t1 WHERE id = "123" AND "456"`,
+					Delim:     DelimiterHorizontal,
 				},
 				{
-					statement: `DELETE FROM t2 WHERE true`,
-					delim:     delimiterHorizontal,
+					Statement: `DELETE FROM t2 WHERE true`,
+					Delim:     DelimiterHorizontal,
 				},
 			},
 		},
 		{
 			desc:  "second query is empty",
 			input: `SELECT 1; ;`,
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: `SELECT 1`,
-					delim:     delimiterHorizontal,
+					Statement: `SELECT 1`,
+					Delim:     DelimiterHorizontal,
 				},
 				{
-					statement: ``,
-					delim:     delimiterHorizontal,
+					Statement: ``,
+					Delim:     DelimiterHorizontal,
 				},
 			},
 		},
 		{
 			desc:  "new line just after delim",
 			input: "SELECT 1;\n SELECT 2\\G\n",
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: `SELECT 1`,
-					delim:     delimiterHorizontal,
+					Statement: `SELECT 1`,
+					Delim:     DelimiterHorizontal,
 				},
 				{
-					statement: `SELECT 2`,
-					delim:     delimiterVertical,
+					Statement: `SELECT 2`,
+					Delim:     DelimiterVertical,
 				},
 			},
 		},
 		{
 			desc:  "horizontal delimiter in string",
 			input: `SELECT "1;2;3"; SELECT 'TL;DR';`,
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: `SELECT "1;2;3"`,
-					delim:     delimiterHorizontal,
+					Statement: `SELECT "1;2;3"`,
+					Delim:     DelimiterHorizontal,
 				},
 				{
-					statement: `SELECT 'TL;DR'`,
-					delim:     delimiterHorizontal,
+					Statement: `SELECT 'TL;DR'`,
+					Delim:     DelimiterHorizontal,
 				},
 			},
 		},
 		{
 			desc:  `vertical delimiter in string`,
 			input: `SELECT r"1\G2\G3"\G SELECT r'4\G5\G6'\G`,
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: `SELECT r"1\G2\G3"`,
-					delim:     delimiterVertical,
+					Statement: `SELECT r"1\G2\G3"`,
+					Delim:     DelimiterVertical,
 				},
 				{
-					statement: `SELECT r'4\G5\G6'`,
-					delim:     delimiterVertical,
+					Statement: `SELECT r'4\G5\G6'`,
+					Delim:     DelimiterVertical,
 				},
 			},
 		},
 		{
 			desc:  "delimiter in quoted identifier",
 			input: "SELECT `1;2`; SELECT `3;4`;",
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: "SELECT `1;2`",
-					delim:     delimiterHorizontal,
+					Statement: "SELECT `1;2`",
+					Delim:     DelimiterHorizontal,
 				},
 				{
-					statement: "SELECT `3;4`",
-					delim:     delimiterHorizontal,
+					Statement: "SELECT `3;4`",
+					Delim:     DelimiterHorizontal,
 				},
 			},
 		},
 		{
 			desc:  `query has new line just before delimiter`,
 			input: "SELECT '123'\n; SELECT '456'\n\\G",
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: `SELECT '123'`,
-					delim:     delimiterHorizontal,
+					Statement: `SELECT '123'`,
+					Delim:     DelimiterHorizontal,
 				},
 				{
-					statement: `SELECT '456'`,
-					delim:     delimiterVertical,
+					Statement: `SELECT '456'`,
+					Delim:     DelimiterVertical,
 				},
 			},
 		},
 		{
 			desc:  `DDL`,
 			input: "CREATE t1 (\nId INT64 NOT NULL\n) PRIMARY KEY (Id);",
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: "CREATE t1 (\nId INT64 NOT NULL\n) PRIMARY KEY (Id)",
-					delim:     delimiterHorizontal,
+					Statement: "CREATE t1 (\nId INT64 NOT NULL\n) PRIMARY KEY (Id)",
+					Delim:     DelimiterHorizontal,
 				},
 			},
 		},
 		{
 			desc:  `statement with multiple comments`,
 			input: "# comment;\nSELECT /* comment */ 1; --comment\nSELECT 2;/* comment */",
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: "SELECT  1",
-					delim:     delimiterHorizontal,
+					Statement: "SELECT  1",
+					Delim:     DelimiterHorizontal,
 				},
 				{
-					statement: "SELECT 2",
-					delim:     delimiterHorizontal,
+					Statement: "SELECT 2",
+					Delim:     DelimiterHorizontal,
 				},
 			},
 		},
@@ -473,31 +473,31 @@ func TestSeparateInput(t *testing.T) {
 		{
 			desc:  `second query ends in the middle of string`,
 			input: `SELECT "123"; SELECT "45`,
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: `SELECT "123"`,
-					delim:     delimiterHorizontal,
+					Statement: `SELECT "123"`,
+					Delim:     DelimiterHorizontal,
 				},
 				{
-					statement: `SELECT "45`,
-					delim:     delimiterUndefined,
+					Statement: `SELECT "45`,
+					Delim:     DelimiterUndefined,
 				},
 			},
 		},
 		{
 			desc:  `totally incorrect query`,
 			input: `a"""""""""'''''''''b`,
-			want: []inputStatement{
+			want: []InputStatement{
 				{
-					statement: `a"""""""""'''''''''b`,
-					delim:     delimiterUndefined,
+					Statement: `a"""""""""'''''''''b`,
+					Delim:     DelimiterUndefined,
 				},
 			},
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
-			got := separateInput(tt.input)
-			if diff := cmp.Diff(tt.want, got, cmp.AllowUnexported(inputStatement{})); diff != "" {
+			got := SeparateInput(tt.input)
+			if diff := cmp.Diff(tt.want, got, cmp.AllowUnexported(InputStatement{})); diff != "" {
 				t.Errorf("difference in statements: (-want +got):\n%s", diff)
 			}
 		})

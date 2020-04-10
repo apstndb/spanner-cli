@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/chzyer/readline"
+	"github.com/cloudspannerecosystem/spanner-cli/separator"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -64,39 +65,39 @@ func TestReadInteractiveInput(t *testing.T) {
 	for _, tt := range []struct {
 		desc  string
 		input string
-		want  *inputStatement
+		want  *separator.InputStatement
 		wantError bool
 	}{
 		{
 			desc:  "single line",
 			input: "SELECT 1;\n",
-			want: &inputStatement{
-				statement: "SELECT 1",
-				delim:     delimiterHorizontal,
+			want: &separator.InputStatement{
+				Statement: "SELECT 1",
+				Delim:     separator.DelimiterHorizontal,
 			},
 		},
 		{
 			desc:  "multi lines",
 			input: "SELECT\n* FROM\n t1\n;\n",
-			want: &inputStatement{
-				statement: "SELECT\n* FROM\n t1",
-				delim:     delimiterHorizontal,
+			want: &separator.InputStatement{
+				Statement: "SELECT\n* FROM\n t1",
+				Delim:     separator.DelimiterHorizontal,
 			},
 		},
 		{
 			desc:  "multi lines with vertical delimiter",
 			input: "SELECT\n* FROM\n t1\\G\n",
-			want: &inputStatement{
-				statement: "SELECT\n* FROM\n t1",
-				delim:     delimiterVertical,
+			want: &separator.InputStatement{
+				Statement: "SELECT\n* FROM\n t1",
+				Delim:     separator.DelimiterVertical,
 			},
 		},
 		{
 			desc:  "multi lines with multiple comments",
 			input: "SELECT\n/* comment */1,\n# comment\n2;\n",
-			want: &inputStatement{
-				statement: "SELECT\n1,\n2",
-				delim:     delimiterHorizontal,
+			want: &separator.InputStatement{
+				Statement: "SELECT\n1,\n2",
+				Delim:     separator.DelimiterHorizontal,
 			},
 		},
 		{
@@ -120,7 +121,7 @@ func TestReadInteractiveInput(t *testing.T) {
 			if err != nil && !tt.wantError {
 				t.Errorf("readInteractiveInput(%q) got error: %v", tt.input, err)
 			}
-			if diff := cmp.Diff(tt.want, got, cmp.AllowUnexported(inputStatement{})); diff != "" {
+			if diff := cmp.Diff(tt.want, got, cmp.AllowUnexported(separator.InputStatement{})); diff != "" {
 				t.Errorf("difference in statement: (-want +got):\n%s", diff)
 			}
 		})

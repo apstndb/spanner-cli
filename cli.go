@@ -11,6 +11,7 @@ import (
 
 	"cloud.google.com/go/spanner"
 	"github.com/chzyer/readline"
+	"github.com/cloudspannerecosystem/spanner-cli/separator"
 	"github.com/olekukonko/tablewriter"
 	"google.golang.org/api/option"
 )
@@ -112,7 +113,7 @@ func (c *Cli) RunInteractive() int {
 			continue
 		}
 
-		stmt, err := BuildStatement(input.statement)
+		stmt, err := BuildStatement(input.Statement)
 		if err != nil {
 			c.PrintInteractiveError(err)
 			continue
@@ -164,7 +165,7 @@ func (c *Cli) RunInteractive() int {
 			result.Stats.ElapsedTime = fmt.Sprintf("%0.2f sec", elapsed)
 		}
 
-		if input.delim == delimiterHorizontal {
+		if input.Delim == separator.DelimiterHorizontal {
 			c.PrintResult(result, DisplayModeTable, true)
 		} else {
 			c.PrintResult(result, DisplayModeVertical, true)
@@ -270,7 +271,7 @@ func createSession(ctx context.Context, projectId string, instanceId string, dat
 	}
 }
 
-func readInteractiveInput(rl *readline.Instance, prompt string) (*inputStatement, error) {
+func readInteractiveInput(rl *readline.Instance, prompt string) (*separator.InputStatement, error) {
 	defer rl.SetPrompt(prompt)
 
 	var input string
@@ -281,12 +282,12 @@ func readInteractiveInput(rl *readline.Instance, prompt string) (*inputStatement
 		}
 		input += line + "\n"
 
-		statements := separateInput(input)
+		statements := separator.SeparateInput(input)
 		switch len(statements) {
 		case 0:
 			// read next input
 		case 1:
-			if statements[0].delim != delimiterUndefined {
+			if statements[0].Delim != separator.DelimiterUndefined {
 				return &statements[0], nil
 			}
 			// read next input
@@ -361,8 +362,8 @@ func printResult(out io.Writer, result *Result, mode DisplayMode, withStats bool
 func buildStatementsWithFlag(input string) ([]*statementWithFlag, error) {
 	var stmts []*statementWithFlag
 	var pendingDdls []string
-	for _, separated := range separateInput(input) {
-		stmt, err := BuildStatement(separated.statement)
+	for _, separated := range separator.SeparateInput(input) {
+		stmt, err := BuildStatement(separated.Statement)
 		if err != nil {
 			return nil, err
 		}
@@ -375,7 +376,7 @@ func buildStatementsWithFlag(input string) ([]*statementWithFlag, error) {
 		stmts = append(stmts, buildStatementWithFlagFromDdls(pendingDdls)...)
 		pendingDdls = nil
 
-		stmts = append(stmts, &statementWithFlag{stmt, separated.delim == delimiterVertical})
+		stmts = append(stmts, &statementWithFlag{stmt, separated.Delim == separator.DelimiterVertical})
 	}
 
 	// Flush pending DDLs

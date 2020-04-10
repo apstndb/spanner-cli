@@ -1,4 +1,4 @@
-package main
+package separator
 
 import (
 	"strings"
@@ -7,41 +7,50 @@ import (
 type delimiter int
 
 const (
-	delimiterUndefined delimiter = iota
-	delimiterHorizontal
-	delimiterVertical
+	DelimiterUndefined delimiter = iota
+	DelimiterHorizontal
+	DelimiterVertical
 )
 
-type inputStatement struct {
-	statement string
-	delim     delimiter
+type InputStatement struct {
+	Statement string
+	Delim     delimiter
 }
 
 func (d delimiter) String() string {
 	switch d {
-	case delimiterUndefined:
+	case DelimiterUndefined:
 		return ""
-	case delimiterHorizontal:
+	case DelimiterHorizontal:
 		return ";"
-	case delimiterVertical:
+	case DelimiterVertical:
 		return `\G`
 	}
 	return ""
 }
 
-func separateInput(input string) []inputStatement {
+func SeparateInput(input string) []InputStatement {
 	return newSeparator(input).separate()
 }
 
 type separator struct {
 	str []rune // remaining input
 	sb  *strings.Builder
+	disableCustomDelimitor bool
 }
 
 func newSeparator(s string) *separator {
 	return &separator{
 		str: []rune(s),
 		sb:  &strings.Builder{},
+	}
+}
+
+func newSeparatorWithOptions(s string, disableCustomDelimiter bool) *separator {
+	return &separator{
+		str:                    []rune(s),
+		sb:                     &strings.Builder{},
+		disableCustomDelimitor: disableCustomDelimiter,
 	}
 }
 
@@ -196,8 +205,8 @@ func (s *separator) skipComments() {
 //
 // NOTE: Logic for parsing a statement is mostly taken from spansql.
 // https://github.com/googleapis/google-cloud-go/blob/master/spanner/spansql/parser.go
-func (s *separator) separate() []inputStatement {
-	var statements []inputStatement
+func (s *separator) separate() []InputStatement {
+	var statements []InputStatement
 	for len(s.str) > 0 {
 		s.skipComments()
 		if len(s.str) == 0 {
@@ -244,18 +253,18 @@ func (s *separator) separate() []inputStatement {
 			s.consumeStringContent("`", false)
 		// horizontal delim
 		case ';':
-			statements = append(statements, inputStatement{
-				statement: strings.TrimSpace(s.sb.String()),
-				delim:     delimiterHorizontal,
+			statements = append(statements, InputStatement{
+				Statement: strings.TrimSpace(s.sb.String()),
+				Delim:     DelimiterHorizontal,
 			})
 			s.sb.Reset()
 			s.str = s.str[1:]
 		// possibly vertical delim
 		case '\\':
-			if len(s.str) >= 2 && s.str[1] == 'G' {
-				statements = append(statements, inputStatement{
-					statement: strings.TrimSpace(s.sb.String()),
-					delim:     delimiterVertical,
+			if !s.disableCustomDelimitor && len(s.str) >= 2 && s.str[1] == 'G' {
+				statements = append(statements, InputStatement{
+					Statement: strings.TrimSpace(s.sb.String()),
+					Delim:     DelimiterVertical,
 				})
 				s.sb.Reset()
 				s.str = s.str[2:]
@@ -272,9 +281,9 @@ func (s *separator) separate() []inputStatement {
 	// flush remained
 	if s.sb.Len() > 0 {
 		if str := strings.TrimSpace(s.sb.String()); len(str) > 0 {
-			statements = append(statements, inputStatement{
-				statement: str,
-				delim:     delimiterUndefined,
+			statements = append(statements, InputStatement{
+				Statement: str,
+				Delim:     DelimiterUndefined,
 			})
 			s.sb.Reset()
 		}

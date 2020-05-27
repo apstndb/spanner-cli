@@ -67,7 +67,7 @@ func BuildQueryPlanTree(plan *pb.QueryPlan, idx int32) *Node {
 
 func (n *Node) Render() string {
 	tree := treeprint.New()
-	renderTree(tree, "", n)
+	renderTree(tree, &Link{Dest: n})
 	return "\n" + tree.String()
 }
 
@@ -109,26 +109,26 @@ func getAllMetadataString(node *Node) string {
 	return fmt.Sprintf(`(%s)`, strings.Join(fields, ", "))
 }
 
-func renderTree(tree treeprint.Tree, linkType string, node *Node) {
-	if !node.IsVisible() {
+func renderTree(tree treeprint.Tree, link *Link) {
+	if !link.Dest.IsVisible() {
 		return
 	}
 
-	str := node.String()
+	str := link.Dest.String()
 
-	if len(node.Children) > 0 {
+	if len(link.Dest.Children) > 0 {
 		var branch treeprint.Tree
-		if linkType != "" {
-			branch = tree.AddMetaBranch(linkType, str)
+		if link.Type != "" {
+			branch = tree.AddMetaBranch(link.Type, str)
 		} else {
 			branch = tree.AddBranch(str)
 		}
-		for _, child := range node.Children {
-			renderTree(branch, child.Type, child.Dest)
+		for _, child := range link.Dest.Children {
+			renderTree(branch, child)
 		}
 	} else {
-		if linkType != "" {
-			tree.AddMetaNode(linkType, str)
+		if link.Type != "" {
+			tree.AddMetaNode(link.Type, str)
 		} else {
 			tree.AddNode(str)
 		}

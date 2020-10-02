@@ -1,4 +1,4 @@
-package main
+package queryplan
 
 import (
 	"io/ioutil"
@@ -30,7 +30,7 @@ func TestRenderTreeUsingTestdataPlans(t *testing.T) {
 			// Original Query:
 			// SELECT s.LastName FROM (SELECT s.LastName FROM Singers AS s WHERE s.FirstName LIKE 'A%' LIMIT 3) s WHERE s.LastName LIKE 'Rich%';
 			title: "With Filter Operator",
-			file:  "testdata/plans/filter.input.json",
+			file:  "../testdata/plans/filter.input.json",
 			want: []QueryPlanRow{
 				{
 					ID:   0,
@@ -76,7 +76,7 @@ func TestRenderTreeUsingTestdataPlans(t *testing.T) {
 				ON a.SingerId = s.SingerId AND a.AlbumId = s.AlbumId;
 			*/
 			title: "Hash Join",
-			file:  "testdata/plans/hash_join.input.json",
+			file:  "../testdata/plans/hash_join.input.json",
 			want: []QueryPlanRow{
 				{
 					ID:   0,
@@ -118,7 +118,7 @@ func TestRenderTreeUsingTestdataPlans(t *testing.T) {
 				FROM Albums AS a;
 			*/
 			title: "Array Subqueries",
-			file:  "testdata/plans/array_subqueries.input.json",
+			file:  "../testdata/plans/array_subqueries.input.json",
 			want: []QueryPlanRow{
 				{
 					ID:   0,
@@ -171,7 +171,7 @@ func TestRenderTreeUsingTestdataPlans(t *testing.T) {
 				FROM Singers;
 			*/
 			title: "Scalar Subqueries",
-			file:  "testdata/plans/scalar_subqueries.input.json",
+			file:  "../testdata/plans/scalar_subqueries.input.json",
 			want: []QueryPlanRow{
 				{
 					Text: "Distributed Union",

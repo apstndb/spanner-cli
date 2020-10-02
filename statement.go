@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/spanner"
+	"github.com/cloudspannerecosystem/spanner-cli/queryplan"
 	"google.golang.org/api/iterator"
 	adminpb "google.golang.org/genproto/googleapis/spanner/admin/database/v1"
 	pb "google.golang.org/genproto/googleapis/spanner/v1"
@@ -541,49 +542,24 @@ func (s *ExplainAnalyzeStatement) Execute(session *Session) (*Result, error) {
 	return result, nil
 }
 
+func toRows(rows [][]string) []Row {
+	var result []Row
+	for i := range rows {
+		result = append(result, Row{rows[i]})
+	}
+	return result
+}
+
 func processPlanWithStats(plan *pb.QueryPlan) (rows []Row, predicates []string, err error) {
-	return processPlanImpl(plan, true)
+	rawRows, predicates, err := queryplan.ProcessPlanImpl(plan, true)
+	return toRows(rawRows), predicates, err
 }
 
 func processPlanWithoutStats(plan *pb.QueryPlan) (rows []Row, predicates []string, err error) {
-	return processPlanImpl(plan, false)
+	rawRows, predicates, err := queryplan.ProcessPlanImpl(plan, false)
+	return toRows(rawRows), predicates, err
 }
 
-func processPlanImpl(plan *pb.QueryPlan, withStats bool) (rows []Row, predicates []string, err error) {
-	planNodes := plan.GetPlanNodes()
-	maxWidthOfNodeID := len(fmt.Sprint(getMaxVisibleNodeID(plan)))
-	widthOfNodeIDWithIndicator := maxWidthOfNodeID + 1
-
-	tree := BuildQueryPlanTree(plan, 0)
-
-	treeRows, err := tree.RenderTreeWithStats(planNodes)
-	if err != nil {
-		return nil, nil, err
-	}
-	for _, row := range treeRows {
-		var formattedID string
-		if len(row.Predicates) > 0 {
-			formattedID = fmt.Sprintf("%*s", widthOfNodeIDWithIndicator, "*"+fmt.Sprint(row.ID))
-		} else {
-			formattedID = fmt.Sprintf("%*d", widthOfNodeIDWithIndicator, row.ID)
-		}
-		if withStats {
-			rows = append(rows, Row{[]string{formattedID, row.Text, row.RowsTotal, row.Execution, row.LatencyTotal}})
-		} else {
-			rows = append(rows, Row{[]string{formattedID, row.Text}})
-		}
-		for i, predicate := range row.Predicates {
-			var prefix string
-			if i == 0 {
-				prefix = fmt.Sprintf("%*d:", maxWidthOfNodeID, row.ID)
-			} else {
-				prefix = strings.Repeat(" ", maxWidthOfNodeID+1)
-			}
-			predicates = append(predicates, fmt.Sprintf("%s %s", prefix, predicate))
-		}
-	}
-	return rows, predicates, nil
-}
 
 type ShowColumnsStatement struct {
 	Table string

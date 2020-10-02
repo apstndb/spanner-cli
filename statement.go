@@ -560,7 +560,6 @@ func processPlanWithoutStats(plan *pb.QueryPlan) (rows []Row, predicates []strin
 	return toRows(rawRows), predicates, err
 }
 
-
 type ShowColumnsStatement struct {
 	Table string
 }

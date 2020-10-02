@@ -63,19 +63,19 @@ func _main() error {
 }
 
 func printResult(out io.Writer, columns []string, rows [][]string, predicates []string) {
-		table := tablewriter.NewWriter(out)
-		table.SetAutoFormatHeaders(false)
-		table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-		table.SetAlignment(tablewriter.ALIGN_LEFT)
-		table.SetAutoWrapText(false)
+	table := tablewriter.NewWriter(out)
+	table.SetAutoFormatHeaders(false)
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetAutoWrapText(false)
 
-		for _, row := range rows {
-			table.Append(row)
-		}
-		table.SetHeader(columns)
-		if len(rows) > 0 {
-			table.Render()
-		}
+	for _, row := range rows {
+		table.Append(row)
+	}
+	table.SetHeader(columns)
+	if len(rows) > 0 {
+		table.Render()
+	}
 
 	if len(predicates) > 0 {
 		fmt.Fprintln(out, "Predicates(identified by ID):")

@@ -24,14 +24,14 @@ func TestRenderTreeUsingTestdataPlans(t *testing.T) {
 	for _, test := range []struct {
 		title string
 		file  string
-		want  []QueryPlanRow
+		want  []rowWithPredicates
 	}{
 		{
 			// Original Query:
 			// SELECT s.LastName FROM (SELECT s.LastName FROM Singers AS s WHERE s.FirstName LIKE 'A%' LIMIT 3) s WHERE s.LastName LIKE 'Rich%';
 			title: "With Filter Operator",
 			file:  "../testdata/plans/filter.input.json",
-			want: []QueryPlanRow{
+			want: []rowWithPredicates{
 				{
 					ID:   0,
 					Text: "Serialize Result",
@@ -77,7 +77,7 @@ func TestRenderTreeUsingTestdataPlans(t *testing.T) {
 			*/
 			title: "Hash Join",
 			file:  "../testdata/plans/hash_join.input.json",
-			want: []QueryPlanRow{
+			want: []rowWithPredicates{
 				{
 					ID:   0,
 					Text: "Distributed Union",
@@ -119,7 +119,7 @@ func TestRenderTreeUsingTestdataPlans(t *testing.T) {
 			*/
 			title: "Array Subqueries",
 			file:  "../testdata/plans/array_subqueries.input.json",
-			want: []QueryPlanRow{
+			want: []rowWithPredicates{
 				{
 					ID:   0,
 					Text: "Distributed Union",
@@ -172,7 +172,7 @@ func TestRenderTreeUsingTestdataPlans(t *testing.T) {
 			*/
 			title: "Scalar Subqueries",
 			file:  "../testdata/plans/scalar_subqueries.input.json",
-			want: []QueryPlanRow{
+			want: []rowWithPredicates{
 				{
 					Text: "Distributed Union",
 				},
@@ -231,7 +231,7 @@ func TestRenderTreeUsingTestdataPlans(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			tree := BuildQueryPlanTree(&plan, 0)
+			tree := buildQueryPlanTree(&plan, 0)
 			got, err := tree.RenderTreeWithStats(plan.GetPlanNodes())
 			if err != nil {
 				t.Errorf("error should be nil, but got = %v", err)
@@ -247,7 +247,7 @@ func TestRenderTreeWithStats(t *testing.T) {
 	for _, test := range []struct {
 		title string
 		plan  *spanner.QueryPlan
-		want  []QueryPlanRow
+		want  []rowWithPredicates
 	}{
 		{
 			title: "Simple Query",
@@ -306,7 +306,7 @@ func TestRenderTreeWithStats(t *testing.T) {
 					},
 				},
 			},
-			want: []QueryPlanRow{
+			want: []rowWithPredicates{
 				{
 					ID:           0,
 					Text:         "Distributed Union",
@@ -338,7 +338,7 @@ func TestRenderTreeWithStats(t *testing.T) {
 			}},
 	} {
 		t.Run(test.title, func(t *testing.T) {
-			tree := BuildQueryPlanTree(test.plan, 0)
+			tree := buildQueryPlanTree(test.plan, 0)
 			got, err := tree.RenderTreeWithStats(test.plan.GetPlanNodes())
 			if err != nil {
 				t.Errorf("error should be nil, but got = %v", err)
@@ -352,11 +352,11 @@ func TestRenderTreeWithStats(t *testing.T) {
 func TestNodeString(t *testing.T) {
 	for _, test := range []struct {
 		title string
-		node  *Node
+		node  *node
 		want  string
 	}{
 		{"Distributed Union with call_type=Local",
-			&Node{PlanNode: &spanner.PlanNode{
+			&node{PlanNode: &spanner.PlanNode{
 				DisplayName: "Distributed Union",
 				Metadata: mustNewStruct(map[string]interface{}{
 					"call_type":             "Local",
@@ -365,7 +365,7 @@ func TestNodeString(t *testing.T) {
 			}}, "Local Distributed Union",
 		},
 		{"Scan with scan_type=IndexScan and Full scan=true",
-			&Node{PlanNode: &spanner.PlanNode{
+			&node{PlanNode: &spanner.PlanNode{
 				DisplayName: "Scan",
 				Metadata: mustNewStruct(map[string]interface{}{
 					"scan_type":   "IndexScan",
@@ -374,7 +374,7 @@ func TestNodeString(t *testing.T) {
 				}),
 			}}, "Index Scan (Full scan: true, Index: SongsBySongName)"},
 		{"Scan with scan_type=TableScan",
-			&Node{PlanNode: &spanner.PlanNode{
+			&node{PlanNode: &spanner.PlanNode{
 				DisplayName: "Scan",
 				Metadata: mustNewStruct(map[string]interface{}{
 					"scan_type":   "TableScan",
@@ -382,7 +382,7 @@ func TestNodeString(t *testing.T) {
 				}),
 			}}, "Table Scan (Table: Songs)"},
 		{"Scan with scan_type=BatchScan",
-			&Node{PlanNode: &spanner.PlanNode{
+			&node{PlanNode: &spanner.PlanNode{
 				DisplayName: "Scan",
 				Metadata: mustNewStruct(map[string]interface{}{
 					"scan_type":   "BatchScan",
@@ -390,21 +390,21 @@ func TestNodeString(t *testing.T) {
 				}),
 			}}, "Batch Scan (Batch: $v2)"},
 		{"Sort Limit with call_type=Local",
-			&Node{PlanNode: &spanner.PlanNode{
+			&node{PlanNode: &spanner.PlanNode{
 				DisplayName: "Sort Limit",
 				Metadata: mustNewStruct(map[string]interface{}{
 					"call_type": "Local",
 				}),
 			}}, "Local Sort Limit"},
 		{"Sort Limit with call_type=Global",
-			&Node{PlanNode: &spanner.PlanNode{
+			&node{PlanNode: &spanner.PlanNode{
 				DisplayName: "Sort Limit",
 				Metadata: mustNewStruct(map[string]interface{}{
 					"call_type": "Global",
 				}),
 			}}, "Global Sort Limit"},
 		{"Aggregate with iterator_type=Stream",
-			&Node{PlanNode: &spanner.PlanNode{
+			&node{PlanNode: &spanner.PlanNode{
 				DisplayName: "Aggregate",
 				Metadata: mustNewStruct(map[string]interface{}{
 					"iterator_type": "Stream",

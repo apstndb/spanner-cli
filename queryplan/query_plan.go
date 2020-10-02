@@ -36,17 +36,17 @@ func init() {
 	treeprint.IndentSize = 2
 }
 
-type Link struct {
-	Dest *Node
+type link struct {
+	Dest *node
 	Type string
 }
 
-type Node struct {
+type node struct {
 	PlanNode *pb.PlanNode
-	Children []*Link
+	Children []*link
 }
 
-type QueryPlanNodeWithStats struct {
+type nodeWithStats struct {
 	ID             int32            `json:"id"`
 	ExecutionStats *structpb.Struct `json:"execution_stats"`
 	DisplayName    string           `json:"display_name"`
@@ -66,8 +66,8 @@ func (v executionStatsValue) String() string {
 	}
 }
 
-// queryPlanNodeWithStatsTyped is proto-free typed representation of QueryPlanNodeWithStats
-type queryPlanNodeWithStatsTyped struct {
+// nodeWithStatsTyped is proto-free typed representation of nodeWithStats
+type nodeWithStatsTyped struct {
 	ID             int32 `json:"id"`
 	ExecutionStats struct {
 		Rows             executionStatsValue `json:"rows"`
@@ -80,9 +80,9 @@ type queryPlanNodeWithStatsTyped struct {
 	LinkType    string `json:"link_type"`
 }
 
-func BuildQueryPlanTree(plan *pb.QueryPlan, idx int32) *Node {
+func buildQueryPlanTree(plan *pb.QueryPlan, idx int32) *node {
 	if len(plan.PlanNodes) == 0 {
-		return &Node{}
+		return &node{}
 	}
 
 	nodeMap := map[int32]*pb.PlanNode{}
@@ -90,28 +90,28 @@ func BuildQueryPlanTree(plan *pb.QueryPlan, idx int32) *Node {
 		nodeMap[node.Index] = node
 	}
 
-	root := &Node{
+	root := &node{
 		PlanNode: plan.PlanNodes[idx],
-		Children: make([]*Link, 0),
+		Children: make([]*link, 0),
 	}
 	if root.PlanNode.ChildLinks != nil {
 		for i, childLink := range root.PlanNode.ChildLinks {
 			idx := childLink.ChildIndex
-			child := BuildQueryPlanTree(plan, idx)
+			child := buildQueryPlanTree(plan, idx)
 			childType := childLink.Type
 
 			// Fill missing Input type into the first child of [Distributed] (Cross|Outer) Apply
 			if childType == "" && strings.HasSuffix(root.PlanNode.DisplayName, "Apply") && i == 0 {
 				childType = "Input"
 			}
-			root.Children = append(root.Children, &Link{Type: childType, Dest: child})
+			root.Children = append(root.Children, &link{Type: childType, Dest: child})
 		}
 	}
 
 	return root
 }
 
-type QueryPlanRow struct {
+type rowWithPredicates struct {
 	ID           int32
 	Text         string
 	RowsTotal    string
@@ -133,10 +133,10 @@ func isPredicate(planNodes []*pb.PlanNode, childLink *pb.PlanNode_ChildLink) boo
 	return false
 }
 
-func (n *Node) RenderTreeWithStats(planNodes []*pb.PlanNode) ([]QueryPlanRow, error) {
+func (n *node) RenderTreeWithStats(planNodes []*pb.PlanNode) ([]rowWithPredicates, error) {
 	tree := treeprint.New()
 	renderTreeWithStats(tree, "", n)
-	var result []QueryPlanRow
+	var result []rowWithPredicates
 	for _, line := range strings.Split(tree.String(), "\n") {
 		if line == "" {
 			continue
@@ -149,7 +149,7 @@ func (n *Node) RenderTreeWithStats(planNodes []*pb.PlanNode) ([]QueryPlanRow, er
 		}
 		branchText, protojsonText := split[0], split[1]
 
-		var planNode queryPlanNodeWithStatsTyped
+		var planNode nodeWithStatsTyped
 		if err := json.Unmarshal([]byte(protojsonText), &planNode); err != nil {
 			return nil, fmt.Errorf("unexpected JSON unmarshal error, tree line = %q", line)
 		}
@@ -169,7 +169,7 @@ func (n *Node) RenderTreeWithStats(planNodes []*pb.PlanNode) ([]QueryPlanRow, er
 			predicates = append(predicates, fmt.Sprintf("%s: %s", cl.GetType(), planNodes[cl.ChildIndex].GetShortRepresentation().GetDescription()))
 		}
 
-		result = append(result, QueryPlanRow{
+		result = append(result, rowWithPredicates{
 			ID:           planNode.ID,
 			Predicates:   predicates,
 			Text:         branchText + text,
@@ -181,7 +181,7 @@ func (n *Node) RenderTreeWithStats(planNodes []*pb.PlanNode) ([]QueryPlanRow, er
 	return result, nil
 }
 
-func (n *Node) IsVisible() bool {
+func (n *node) IsVisible() bool {
 	operator := n.PlanNode.DisplayName
 	if operator == "Function" || operator == "Reference" || operator == "Constant" || operator == "Array Constructor" || operator == "Parameter" {
 		return false
@@ -190,11 +190,11 @@ func (n *Node) IsVisible() bool {
 	return true
 }
 
-func (n *Node) IsRoot() bool {
+func (n *node) IsRoot() bool {
 	return n.PlanNode.Index == 0
 }
 
-func (n *Node) String() string {
+func (n *node) String() string {
 	metadataFields := n.PlanNode.GetMetadata().GetFields()
 
 	var operator string
@@ -246,13 +246,13 @@ func (n *Node) String() string {
 	return operator + " " + metadata
 }
 
-func renderTreeWithStats(tree treeprint.Tree, linkType string, node *Node) {
+func renderTreeWithStats(tree treeprint.Tree, linkType string, node *node) {
 	if !node.IsVisible() {
 		return
 	}
 
 	b, _ := json.Marshal(
-		QueryPlanNodeWithStats{
+		nodeWithStats{
 			ID:             node.PlanNode.Index,
 			ExecutionStats: node.PlanNode.GetExecutionStats(),
 			DisplayName:    node.String(),
@@ -293,7 +293,7 @@ func getMaxVisibleNodeID(plan *pb.QueryPlan) int32 {
 	// See QueryPlan.plan_nodes[] in the document.
 	// https://cloud.google.com/spanner/docs/reference/rpc/google.spanner.v1?hl=en#google.spanner.v1.QueryPlan.FIELDS.repeated.google.spanner.v1.PlanNode.google.spanner.v1.QueryPlan.plan_nodes
 	for _, planNode := range plan.GetPlanNodes() {
-		if (&Node{PlanNode: planNode}).IsVisible() {
+		if (&node{PlanNode: planNode}).IsVisible() {
 			maxVisibleNodeID = planNode.Index
 		}
 	}

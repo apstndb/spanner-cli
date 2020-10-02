@@ -20,7 +20,7 @@ func ProcessPlan(plan *pb.QueryPlan) (rows []Row, predicates []string, err error
 	maxWidthOfNodeID := len(fmt.Sprint(getMaxVisibleNodeID(plan)))
 	widthOfNodeIDWithIndicator := maxWidthOfNodeID + 1
 
-	tree := BuildQueryPlanTree(plan, 0)
+	tree := buildQueryPlanTree(plan, 0)
 
 	treeRows, err := tree.RenderTreeWithStats(planNodes)
 	if err != nil {

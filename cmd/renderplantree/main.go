@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cloudspannerecosystem/spanner-cli/queryplan"
+	"github.com/cloudspannerecosystem/spanner-cli/internal/queryplan"
 	"github.com/olekukonko/tablewriter"
 	"google.golang.org/genproto/googleapis/spanner/v1"
 	"google.golang.org/protobuf/encoding/protojson"

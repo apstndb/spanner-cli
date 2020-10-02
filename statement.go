@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/spanner"
-	"github.com/cloudspannerecosystem/spanner-cli/queryplan"
+	"github.com/cloudspannerecosystem/spanner-cli/internal/queryplan"
 	"google.golang.org/api/iterator"
 	adminpb "google.golang.org/genproto/googleapis/spanner/admin/database/v1"
 	pb "google.golang.org/genproto/googleapis/spanner/v1"

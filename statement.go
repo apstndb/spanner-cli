@@ -542,22 +542,20 @@ func (s *ExplainAnalyzeStatement) Execute(session *Session) (*Result, error) {
 	return result, nil
 }
 
-func toRows(rows [][]string) []Row {
-	var result []Row
-	for i := range rows {
-		result = append(result, Row{rows[i]})
-	}
-	return result
-}
-
 func processPlanWithStats(plan *pb.QueryPlan) (rows []Row, predicates []string, err error) {
-	rawRows, predicates, err := queryplan.ProcessPlanImpl(plan, true)
-	return toRows(rawRows), predicates, err
+	rawRows, predicates, err := queryplan.ProcessPlan(plan)
+	for _, row := range rawRows {
+		rows = append(rows, Row{[]string{row.FormattedID, row.Text, row.RowsTotal, row.Execution, row.LatencyTotal}})
+	}
+	return rows, predicates, err
 }
 
 func processPlanWithoutStats(plan *pb.QueryPlan) (rows []Row, predicates []string, err error) {
-	rawRows, predicates, err := queryplan.ProcessPlanImpl(plan, false)
-	return toRows(rawRows), predicates, err
+	rawRows, predicates, err := queryplan.ProcessPlan(plan)
+	for _, row := range rawRows {
+		rows = append(rows, Row{[]string{row.FormattedID, row.Text}})
+	}
+	return rows, predicates, err
 }
 
 type ShowColumnsStatement struct {

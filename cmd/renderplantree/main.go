@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/cloudspannerecosystem/spanner-cli/queryplan"
 	"github.com/olekukonko/tablewriter"
@@ -20,23 +21,38 @@ func main() {
 	}
 }
 
+type tableRenderDef struct {
+	ColumnsMapFunc func(queryplan.Row) []string
+	ColumnNames    []string
+}
+
 var (
-	withStatsColumnNamesMap = map[bool][]string{
-		false: {"ID", "Query_Execution_Plan (EXPERIMENTAL)"},
-		true:  {"ID", "Query_Execution_Plan", "Rows_Returned", "Executions", "Total_Latency"},
+	withStatsToRenderDefMap = map[bool]tableRenderDef{
+		false: {
+			ColumnNames: []string{"ID", "Query_Execution_Plan (EXPERIMENTAL)"},
+			ColumnsMapFunc: func(row queryplan.Row) []string {
+				return []string{row.FormattedID, row.Text}
+			},
+		},
+		true: {
+			ColumnNames: []string{"ID", "Query_Execution_Plan", "Rows_Returned", "Executions", "Total_Latency"},
+			ColumnsMapFunc: func(row queryplan.Row) []string {
+				return []string{row.FormattedID, row.Text, row.RowsTotal, row.Execution, row.LatencyTotal}
+			},
+		},
 	}
 )
 
 func _main() error {
-	mode := flag.String("query-mode", "", "PROFILE or PLAN")
+	mode := flag.String("mode", "", "PROFILE or PLAN(ignore case)")
 	flag.Parse()
 
 	var withStats bool
-	switch *mode {
-	case "", "PROFILE":
-		withStats = true
-	case "PLAN":
+	switch strings.ToUpper(*mode) {
+	case "", "PLAN":
 		withStats = false
+	case "PROFILE":
+		withStats = true
 	default:
 		flag.Usage()
 		os.Exit(1)
@@ -53,16 +69,15 @@ func _main() error {
 		return err
 	}
 
-	rows, predicates, err := queryplan.ProcessPlanImpl(&qp, withStats)
+	rows, predicates, err := queryplan.ProcessPlan(&qp)
 	if err != nil {
 		return err
 	}
-
-	printResult(os.Stdout, withStatsColumnNamesMap[withStats], rows, predicates)
+	printResult(os.Stdout, withStatsToRenderDefMap[withStats], rows, predicates)
 	return nil
 }
 
-func printResult(out io.Writer, columns []string, rows [][]string, predicates []string) {
+func printResult(out io.Writer, renderDef tableRenderDef, rows []queryplan.Row, predicates []string) {
 	table := tablewriter.NewWriter(out)
 	table.SetAutoFormatHeaders(false)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
@@ -70,9 +85,9 @@ func printResult(out io.Writer, columns []string, rows [][]string, predicates []
 	table.SetAutoWrapText(false)
 
 	for _, row := range rows {
-		table.Append(row)
+		table.Append(renderDef.ColumnsMapFunc(row))
 	}
-	table.SetHeader(columns)
+	table.SetHeader(renderDef.ColumnNames)
 	if len(rows) > 0 {
 		table.Render()
 	}

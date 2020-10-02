@@ -7,7 +7,15 @@ import (
 	pb "google.golang.org/genproto/googleapis/spanner/v1"
 )
 
-func ProcessPlanImpl(plan *pb.QueryPlan, withStats bool) (rows [][]string, predicates []string, err error) {
+type Row struct {
+	FormattedID  string
+	Text         string
+	RowsTotal    string
+	Execution    string
+	LatencyTotal string
+}
+
+func ProcessPlan(plan *pb.QueryPlan) (rows []Row, predicates []string, err error) {
 	planNodes := plan.GetPlanNodes()
 	maxWidthOfNodeID := len(fmt.Sprint(getMaxVisibleNodeID(plan)))
 	widthOfNodeIDWithIndicator := maxWidthOfNodeID + 1
@@ -25,11 +33,13 @@ func ProcessPlanImpl(plan *pb.QueryPlan, withStats bool) (rows [][]string, predi
 		} else {
 			formattedID = fmt.Sprintf("%*d", widthOfNodeIDWithIndicator, row.ID)
 		}
-		if withStats {
-			rows = append(rows, []string{formattedID, row.Text, row.RowsTotal, row.Execution, row.LatencyTotal})
-		} else {
-			rows = append(rows, []string{formattedID, row.Text})
-		}
+		rows = append(rows, Row{
+			FormattedID:  formattedID,
+			Text:         row.Text,
+			RowsTotal:    row.RowsTotal,
+			Execution:    row.Execution,
+			LatencyTotal: row.LatencyTotal,
+		})
 		for i, predicate := range row.Predicates {
 			var prefix string
 			if i == 0 {

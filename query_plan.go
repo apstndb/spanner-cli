@@ -135,6 +135,7 @@ func isPredicate(planNodes []*pb.PlanNode, childLink *pb.PlanNode_ChildLink) boo
 
 func (n *Node) RenderTreeWithStats(planNodes []*pb.PlanNode) ([]QueryPlanRow, error) {
 	tree := treeprint.New()
+	inplaceFixPlanNodes(planNodes)
 	renderTreeWithStats(tree, "", n)
 	var result []QueryPlanRow
 	for _, line := range strings.Split(tree.String(), "\n") {
@@ -179,6 +180,19 @@ func (n *Node) RenderTreeWithStats(planNodes []*pb.PlanNode) ([]QueryPlanRow, er
 		})
 	}
 	return result, nil
+}
+
+func inplaceFixPlanNodes(nodes []*pb.PlanNode) {
+	for _, node := range nodes {
+		if node.GetDisplayName() == "Merge Join" {
+			if len(node.GetChildLinks()) > 2 && node.GetChildLinks()[2].Type == "" {
+				node.GetChildLinks()[2].Type = "Condition"
+			}
+			if len(node.GetChildLinks()) > 3 && node.GetChildLinks()[3].Type == "" {
+				node.GetChildLinks()[3].Type = "Residual Condition"
+			}
+		}
+	}
 }
 
 func (n *Node) IsRoot() bool {

@@ -405,12 +405,12 @@ func TestBuildStatement(t *testing.T) {
 		{
 			desc:  "SHOW CREATE TABLE statement",
 			input: "SHOW CREATE TABLE t1",
-			want:  &ShowCreateTableStatement{Table: "t1"},
+			want:  &ShowCreateStatement{ObjectType: "TABLE", Name: "t1"},
 		},
 		{
 			desc:  "SHOW CREATE TABLE statement with quoted identifier",
 			input: "SHOW CREATE TABLE `TABLE`",
-			want:  &ShowCreateTableStatement{Table: "TABLE"},
+			want:  &ShowCreateStatement{ObjectType: "TABLE", Name: "TABLE"},
 		},
 		{
 			desc:  "SHOW TABLES statement",
@@ -530,13 +530,13 @@ func TestIsCreateTableDDL(t *testing.T) {
 			want:  true,
 		},
 		{
-			desc:  "given table is prefix of DDL's table",
+			desc:  "given table is prefix of DDL's name",
 			ddl:   "CREATE TABLE t12 (\n",
 			table: "t1",
 			want:  false,
 		},
 		{
-			desc:  "DDL's table is prefix of given table",
+			desc:  "DDL's table is prefix of given name",
 			ddl:   "CREATE TABLE t1 (\n",
 			table: "t12",
 			want:  false,
@@ -561,8 +561,8 @@ func TestIsCreateTableDDL(t *testing.T) {
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
-			if got := isCreateTableDDL(tt.ddl, tt.table); got != tt.want {
-				t.Errorf("isCreateTableDDL(%q, %q) = %v, but want %v", tt.ddl, tt.table, got, tt.want)
+			if got := isCreateTargetObjectDDL(tt.ddl, "TABLE", tt.table); got != tt.want {
+				t.Errorf("isCreateTargetObjectDDL(%q, %q) = %v, but want %v", tt.ddl, tt.table, got, tt.want)
 			}
 		})
 	}

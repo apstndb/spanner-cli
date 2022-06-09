@@ -108,14 +108,14 @@ var (
 	closeRe    = regexp.MustCompile(`(?is)^CLOSE$`)
 
 	// Other
-	exitRe            = regexp.MustCompile(`(?is)^EXIT$`)
-	useRe             = regexp.MustCompile(`(?is)^USE\s+(.+)$`)
-	showDatabasesRe   = regexp.MustCompile(`(?is)^SHOW\s+DATABASES$`)
-	showCreateTableRe = regexp.MustCompile(`(?is)^SHOW\s+CREATE\s+TABLE\s+(.+)$`)
-	showTablesRe      = regexp.MustCompile(`(?is)^SHOW\s+TABLES$`)
-	showColumnsRe     = regexp.MustCompile(`(?is)^(?:SHOW\s+COLUMNS\s+FROM)\s+(.+)$`)
-	showIndexRe       = regexp.MustCompile(`(?is)^SHOW\s+(?:INDEX|INDEXES|KEYS)\s+FROM\s+(.+)$`)
-	explainRe         = regexp.MustCompile(`(?is)^(?:EXPLAIN|DESC(?:RIBE)?)\s+(ANALYZE\s+)?(.+)$`)
+	exitRe          = regexp.MustCompile(`(?is)^EXIT$`)
+	useRe           = regexp.MustCompile(`(?is)^USE\s+(.+)$`)
+	showDatabasesRe = regexp.MustCompile(`(?is)^SHOW\s+DATABASES$`)
+	showCreateRe    = regexp.MustCompile(`(?is)^SHOW\s+CREATE\s+(.*)\s+(.+)$`)
+	showTablesRe    = regexp.MustCompile(`(?is)^SHOW\s+TABLES$`)
+	showColumnsRe   = regexp.MustCompile(`(?is)^(?:SHOW\s+COLUMNS\s+FROM)\s+(.+)$`)
+	showIndexRe     = regexp.MustCompile(`(?is)^SHOW\s+(?:INDEX|INDEXES|KEYS)\s+FROM\s+(.+)$`)
+	explainRe       = regexp.MustCompile(`(?is)^(?:EXPLAIN|DESC(?:RIBE)?)\s+(ANALYZE\s+)?(.+)$`)
 )
 
 var (
@@ -148,9 +148,9 @@ func BuildStatement(input string) (Statement, error) {
 		return &TruncateTableStatement{Table: unquoteIdentifier(matched[1])}, nil
 	case showDatabasesRe.MatchString(input):
 		return &ShowDatabasesStatement{}, nil
-	case showCreateTableRe.MatchString(input):
-		matched := showCreateTableRe.FindStringSubmatch(input)
-		return &ShowCreateTableStatement{Table: unquoteIdentifier(matched[1])}, nil
+	case showCreateRe.MatchString(input):
+		matched := showCreateRe.FindStringSubmatch(input)
+		return &ShowCreateStatement{ObjectType: matched[1], Name: unquoteIdentifier(matched[2])}, nil
 	case showTablesRe.MatchString(input):
 		return &ShowTablesStatement{}, nil
 	case explainRe.MatchString(input):
@@ -413,12 +413,13 @@ func (s *ShowDatabasesStatement) Execute(ctx context.Context, session *Session) 
 	return result, nil
 }
 
-type ShowCreateTableStatement struct {
-	Table string
+type ShowCreateStatement struct {
+	ObjectType string
+	Name       string
 }
 
-func (s *ShowCreateTableStatement) Execute(ctx context.Context, session *Session) (*Result, error) {
-	result := &Result{ColumnNames: []string{"Table", "Create Table"}}
+func (s *ShowCreateStatement) Execute(ctx context.Context, session *Session) (*Result, error) {
+	result := &Result{ColumnNames: []string{"Name", "DDL"}}
 
 	ddlResponse, err := session.adminClient.GetDatabaseDdl(ctx, &adminpb.GetDatabaseDdlRequest{
 		Database: session.DatabasePath(),
@@ -427,16 +428,16 @@ func (s *ShowCreateTableStatement) Execute(ctx context.Context, session *Session
 		return nil, err
 	}
 	for _, stmt := range ddlResponse.Statements {
-		if isCreateTableDDL(stmt, s.Table) {
+		if isCreateTargetObjectDDL(stmt, s.ObjectType, s.Name) {
 			resultRow := Row{
-				Columns: []string{s.Table, stmt},
+				Columns: []string{s.Name, stmt},
 			}
 			result.Rows = append(result.Rows, resultRow)
 			break
 		}
 	}
 	if len(result.Rows) == 0 {
-		return nil, fmt.Errorf("table %q doesn't exist", s.Table)
+		return nil, fmt.Errorf("%s %q doesn't exist", s.ObjectType, s.Name)
 	}
 
 	result.AffectedRows = len(result.Rows)
@@ -444,9 +445,9 @@ func (s *ShowCreateTableStatement) Execute(ctx context.Context, session *Session
 	return result, nil
 }
 
-func isCreateTableDDL(ddl string, table string) bool {
-	table = regexp.QuoteMeta(table)
-	re := fmt.Sprintf("(?i)^CREATE TABLE (%s|`%s`)\\s*\\(", table, table)
+func isCreateTargetObjectDDL(ddl string, objectType string, name string) bool {
+	name = regexp.QuoteMeta(name)
+	re := fmt.Sprintf("(?i)^CREATE (?:UNIQUE )?(?:NULL_FILTERED )?%s (%s|`%s`)[^a-zA-Z0-9_]", objectType, name, name)
 	return regexp.MustCompile(re).MatchString(ddl)
 }
 
